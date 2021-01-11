@@ -1,6 +1,8 @@
 import pygame
 from math import ceil, sqrt
 from hex_class import Hex
+from time import sleep
+from random import randrange
 
 
 class Subsector:
@@ -25,16 +27,134 @@ class Subsector:
         self.display = pygame.display.set_mode((self.display_width, self.display_height))
         self.map_button_to_index = {}
         self.map_index_to_system = {}
-        self.clock = None
+        self.clock = pygame.time.Clock()
+        self.rand = True
+
+    def intro(self):
+        def draw_title():
+            white = (255, 255, 255)
+            black = (0, 0, 0)
+            self.display.fill(white)
+            font = pygame.font.SysFont('arial', self.display_width // 22)
+            text = font.render("Traveller Map Generator & Display", True, black, white)
+            text_rect = text.get_rect()
+            text_rect.center = (self.display_width // 2, self.display_height // 4)
+            self.display.blit(text, text_rect)
+            pygame.display.update()
+
+        def get_random_generator_button_rect_points():
+            p1 = (self.display_width / 12, (self.display_height / 2))
+            p2 = (self.display_width / 9 * 4, (self.display_height / 2))
+            p3 = (self.display_width / 9 * 4, (self.display_height * 5) / 8)
+            p4 = (self.display_width / 12, (self.display_height * 5) / 8)
+            return p1, p2, p3, p4
+
+        def draw_random_generator_button():
+            def draw_button_background():
+                points = get_random_generator_button_rect_points()
+                pygame.draw.polygon(self.display, red, points)
+
+            def draw_button_text():
+                font = pygame.font.SysFont('arial', self.display_width // 32)
+                text = font.render("Generate Random Map", True, black, red)
+                text_rect = text.get_rect()
+                text_rect.center = (self.display_width * 19 / 72, self.display_height * 9 / 16)
+                self.display.blit(text, text_rect)
+
+            draw_button_background()
+            draw_button_text()
+
+        def get_preselected_map_button_rect_points():
+            p1 = (self.display_width / 12 * 11, (self.display_height / 2))
+            p2 = (self.display_width / 9 * 5, (self.display_height / 2))
+            p3 = (self.display_width / 9 * 5, (self.display_height * 5) / 8)
+            p4 = (self.display_width / 12 * 11, (self.display_height * 5) / 8)
+            return p1, p2, p3, p4
+
+        def draw_preselected_map_button():
+            def draw_button_background():
+                points = get_preselected_map_button_rect_points()
+                pygame.draw.polygon(self.display, green, points)
+
+            def draw_button_text():
+                font = pygame.font.SysFont('arial', self.display_width // 32)
+                text = font.render("Draw Preselected Map", True, black, green)
+                text_rect = text.get_rect()
+                text_rect.center = (self.display_width * 53 / 72, self.display_height * 9 / 16)
+                self.display.blit(text, text_rect)
+
+            draw_button_background()
+            draw_button_text()
+
+        black = (0, 0, 0)
+        red = (255, 0, 0)
+        green = (0, 255, 0)
+        draw_title()
+        draw_random_generator_button()
+        draw_preselected_map_button()
+        pygame.display.update()
+
+        random_generator_button_rect_points = get_random_generator_button_rect_points()
+        preselected_map_button_rect_points = get_preselected_map_button_rect_points()
+
+        print(random_generator_button_rect_points)
+        print(preselected_map_button_rect_points)
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse = pygame.mouse.get_pos()
+                    if random_generator_button_rect_points[0][0] <= mouse[0] <= random_generator_button_rect_points[2][0] \
+                            and random_generator_button_rect_points[1][1] <= mouse[1] <= random_generator_button_rect_points[3][1]:
+                        return
+                    elif preselected_map_button_rect_points[2][0] <= mouse[0] <= preselected_map_button_rect_points[0][0] \
+                            and preselected_map_button_rect_points[1][1] <= mouse[1] <= preselected_map_button_rect_points[3][1]:
+                        self.rand = False
+                        self.ask_for_csv_file()
+
+    def write_to_display(self, message, coords, font_size, font_colour=(0, 0, 0), font_background_colour=(255, 255, 255)):
+        font = pygame.font.SysFont('arial', font_size)
+        text = font.render(message, True, font_colour, font_background_colour)
+        text_rect = text.get_rect()
+        text_rect.center = coords[0], coords[1]
+        self.display.blit(text, text_rect)
+
+    def ask_for_csv_file(self):
+        white = (255, 255, 255)
+        black = (0, 0, 0)
+        self.display.fill(white)
+        self.write_to_display("Enter a CSV file name", (self.display_width / 2, self.display_height * 1 / 3), font_size=self.display_width // 28)
+        name = ""
+        while True:
+            self.write_to_display(name, (self.display_width / 2, self.display_height * 4 / 7), font_size=self.display_width // 32)
+            pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_BACKSPACE:
+                        if len(name) < 1:
+                            continue
+                        name = name[:-1]
+                        pygame.display.update()
+
+                    elif event.key == pygame.K_DELETE:
+                        name = ""
+
+                    else:
+                        name += event.unicode
+
+                    #~print('backspace', randrange(1, 1000))
+            #self.clock.tick(60)
 
     def get_true_width(self):
         return 3 / 2 * self.hex_edge_length * self.subsector_width + 1 / 2 * self.hex_edge_length
 
     def get_true_height(self):
         return sqrt(3) * self.hex_edge_length * self.subsector_height + self.apothem * self.hex_edge_length
-
-    def get_systems(self):
-        return self.systems
 
     def get_position_of_hex(self, index):
         ycoord = int((index[2] if int(index[2]) else "") + (index[3]))
@@ -122,7 +242,7 @@ class Subsector:
         def draw_outline():
             pygame.draw.rect(self.display, b,
                              (self.left, self.top - self.outline_width - 2
-                              , self.true_width, self.true_height), self.outline_width)
+                              , self.true_width, self.true_height + 2), self.outline_width)
 
         def draw_main_hexes():
             for system in self.systems:
@@ -136,11 +256,8 @@ class Subsector:
 
         w = (255, 255, 255)
         b = (0, 0, 0)
-        clock = pygame.time.Clock()
 
         pygame.display.set_caption("Traveller Map Generator & Display")
-
-        self.clock = pygame.time.Clock()
 
         self.display.fill(w)
 
@@ -149,8 +266,6 @@ class Subsector:
         draw_main_hexes()
 
         clean_bottom_rect()
-
-        #  self.display_popup_info(self.map_index_to_system['0101'])
 
         pygame.display.update()
 
@@ -182,8 +297,13 @@ class Subsector:
 
 
 if __name__ == "__main__":
+    with open("Traveller_Test_CSV") as f:
+        for l in f:
+            print(l)
     pygame.init()  # input("Random or predetermined? (r/p) >>> ").lower()
     Main = Subsector(10, 8, 50)
+    Main.intro()
     Main.make()
     Main.draw()
     pygame.quit()
+
