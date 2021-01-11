@@ -120,19 +120,18 @@ class Hex:
             black = (0, 0, 0)
             white = (255, 255, 255)
             colour = black
-            if self.index == '0405': print(x, y, colour)
             if not self.gas_giant: colour = white
             pygame.draw.circle(self.display, colour, (x + self.hex_edge_length / 3 * 2, y - self.hex_edge_length / 5),
                                self.hex_edge_length / 10)
             pygame.display.update()
 
         def get_hex_parameters():
-            p1 = [x - self.hex_edge_length / 2, y - self.apothem * self.hex_edge_length]
-            p2 = [x + self.hex_edge_length / 2, y - self.apothem * self.hex_edge_length]
-            p3 = [x + self.hex_edge_length, y]
-            p4 = [x + self.hex_edge_length / 2, y + self.apothem * self.hex_edge_length]
-            p5 = [x - self.hex_edge_length / 2, y + self.apothem * self.hex_edge_length]
-            p6 = [x - self.hex_edge_length, y]
+            p1 = (x - self.hex_edge_length / 2, y - self.apothem * self.hex_edge_length)
+            p2 = (x + self.hex_edge_length / 2, y - self.apothem * self.hex_edge_length)
+            p3 = (x + self.hex_edge_length, y)
+            p4 = (x + self.hex_edge_length / 2, y + self.apothem * self.hex_edge_length)
+            p5 = (x - self.hex_edge_length / 2, y + self.apothem * self.hex_edge_length)
+            p6 = (x - self.hex_edge_length, y)
             return [p1, p2, p3, p4, p5, p6]
 
         def get_button_parameters(text_rectangle):
