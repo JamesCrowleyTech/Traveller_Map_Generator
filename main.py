@@ -28,7 +28,47 @@ class Subsector:
         self.map_button_to_index = {}
         self.map_index_to_system = {}
         self.clock = pygame.time.Clock()
-        self.rand = True
+        self.rand = None
+        self.csv = None
+
+    def ask_for_csv_file(self):
+        white = (255, 255, 255)
+        black = (0, 0, 0)
+        self.display.fill(white)
+        self.write_to_display("Enter a CSV file name", (self.display_width / 2, self.display_height * 1 / 3),
+                              font_size=self.display_width // 28)
+        name = ""
+        while True:
+            self.write_to_display(name, (self.display_width / 2, self.display_height * 4 / 7),
+                                  font_size=self.display_width // 32)
+            pygame.display.update()
+            b = False
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_BACKSPACE:
+                        if len(name) < 1:
+                            continue
+                        name = name[:-1]
+                        pygame.display.update()
+                        pygame.draw.rect(self.display, white, (0, 480, 1800, 480))
+
+                    # elif event.key == pygame.K_DELETE:
+                    #     name = ""
+
+                    elif event.key == pygame.K_ESCAPE:
+                        self.rand = True
+                        return
+
+                    elif event.key == pygame.K_KP_ENTER:
+                        pass
+
+                    else:
+                        name += event.unicode
+            if b:
+                return
 
     def intro(self):
         def draw_title():
@@ -97,58 +137,35 @@ class Subsector:
         random_generator_button_rect_points = get_random_generator_button_rect_points()
         preselected_map_button_rect_points = get_preselected_map_button_rect_points()
 
-        print(random_generator_button_rect_points)
-        print(preselected_map_button_rect_points)
+        print(randrange(1, 100))
         while True:
+            b = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse = pygame.mouse.get_pos()
-                    if random_generator_button_rect_points[0][0] <= mouse[0] <= random_generator_button_rect_points[2][0] \
+                    if random_generator_button_rect_points[0][0] <= mouse[0] <= random_generator_button_rect_points[2][0]\
                             and random_generator_button_rect_points[1][1] <= mouse[1] <= random_generator_button_rect_points[3][1]:
+                        self.rand = True
                         return
                     elif preselected_map_button_rect_points[2][0] <= mouse[0] <= preselected_map_button_rect_points[0][0] \
                             and preselected_map_button_rect_points[1][1] <= mouse[1] <= preselected_map_button_rect_points[3][1]:
                         self.rand = False
-                        self.ask_for_csv_file()
+                        return
+            if b:
+                break
 
-    def write_to_display(self, message, coords, font_size, font_colour=(0, 0, 0), font_background_colour=(255, 255, 255)):
+    def write_to_display(self, message, coordinates, font_size, font_colour=(0, 0, 0), font_background_colour=(255, 255, 255)):
         font = pygame.font.SysFont('arial', font_size)
         text = font.render(message, True, font_colour, font_background_colour)
         text_rect = text.get_rect()
-        text_rect.center = coords[0], coords[1]
+        text_rect.center = coordinates[0], coordinates[1]
         self.display.blit(text, text_rect)
 
-    def ask_for_csv_file(self):
-        white = (255, 255, 255)
-        black = (0, 0, 0)
-        self.display.fill(white)
-        self.write_to_display("Enter a CSV file name", (self.display_width / 2, self.display_height * 1 / 3), font_size=self.display_width // 28)
-        name = ""
-        while True:
-            self.write_to_display(name, (self.display_width / 2, self.display_height * 4 / 7), font_size=self.display_width // 32)
-            pygame.display.update()
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_BACKSPACE:
-                        if len(name) < 1:
-                            continue
-                        name = name[:-1]
-                        pygame.display.update()
-
-                    elif event.key == pygame.K_DELETE:
-                        name = ""
-
-                    else:
-                        name += event.unicode
-
-                    #~print('backspace', randrange(1, 1000))
-            #self.clock.tick(60)
+        # ~print('backspace', randrange(1, 1000))
+        # self.clock.tick(60)
 
     def get_true_width(self):
         return 3 / 2 * self.hex_edge_length * self.subsector_width + 1 / 2 * self.hex_edge_length
@@ -172,10 +189,13 @@ class Subsector:
                 yield f"{''.join(['0' for _ in range(2 - len(str(i)))])}{i}{''.join(['0' for _ in range(2 - len(str(j)))])}{j}"
 
     def make(self):
-        for _ in range(self.total_cells):
-            self.systems.append(Hex(self.true_width, self.true_height, self.mid_width, self.mid_height,
-                                    self.subsector_width, self.subsector_height, self.top, self.left,
-                                    self.hex_edge_length, next(self.index_generator_object), self.display))
+        if self.rand:
+            for _ in range(self.total_cells):
+                self.systems.append(Hex(self.true_width, self.true_height, self.mid_width, self.mid_height,
+                                        self.subsector_width, self.subsector_height, self.top, self.left,
+                                        self.hex_edge_length, next(self.index_generator_object), self.display))
+        else:
+            pass
 
     def draw_individual_hex(self, system, colour=(211, 211, 211), index_only=False, replace=None):
         x, y = self.get_position_of_hex(system.index)
@@ -297,13 +317,13 @@ class Subsector:
 
 
 if __name__ == "__main__":
-    with open("Traveller_Test_CSV") as f:
-        for l in f:
-            print(l)
-    pygame.init()  # input("Random or predetermined? (r/p) >>> ").lower()
-    Main = Subsector(10, 8, 50)
-    Main.intro()
-    Main.make()
-    Main.draw()
+    pygame.init()
+    while True:
+        Main = Subsector(10, 8, 50)
+        Main.intro()
+        if Main.rand:
+            Main.make()
+            Main.draw()
+        else:
+            Main.ask_for_csv_file()
     pygame.quit()
-
