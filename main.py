@@ -1,7 +1,7 @@
 import pygame
+import csv
 from math import ceil, sqrt
 from hex_class import Hex
-from time import sleep
 from random import randrange
 
 
@@ -16,14 +16,14 @@ class Subsector:
         self.outline_width = 6
         self.display_height = 960
         self.display_width = 1800
-        self.mid_height = self.display_height // 2
+        self.mid_height = self.display_height // 1.9
         self.mid_width = self.display_width // 2
         self.true_height = self.get_true_height()
         self.true_width = self.get_true_width()
         self.top = self.mid_height - self.true_height // 2
         self.left = self.mid_width - self.true_width // 2
         self.bottom = self.top + self.get_true_height() - 3
-        self.index_generator_object = self.index_generator()
+        self.index_generator_object = None
         self.display = pygame.display.set_mode((self.display_width, self.display_height))
         self.map_button_to_index = {}
         self.map_index_to_system = {}
@@ -31,9 +31,45 @@ class Subsector:
         self.rand = None
         self.csv = None
 
+    def setup_system_from_csv(self, csv_file):
+        self.systems = []
+        total_indices = set()
+
+        for i in range(1, self.subsector_width + 1):
+            for j in range(1, self.subsector_height + 2):
+                if not i % 2 and j == self.subsector_height + 1:
+                    continue
+                tmp = ""
+                if len(str(i)) == 1:
+                    tmp += "0"
+                tmp += str(i)
+                if len(str(j)) == 1:
+                    tmp += "0"
+                tmp += str(j)
+                total_indices.add(tmp)
+
+        with open(csv_file) as f:
+            reader = csv.reader(f)
+            next(reader)
+
+            for row in reader:
+                index = row[0]
+                name = row[1]
+                gas_giant = row[2]
+                starport = row[3]
+                total_indices.discard(index)
+                self.systems.append((Hex(self.true_width, self.true_height, self.mid_width, self.mid_height,
+                                         self.subsector_width, self.subsector_height, self.top, self.left,
+                                         self.hex_edge_length, index, self.display, random=False, name=name,
+                                         starport=starport, gas_giant=gas_giant, valid=True)))
+
+        for index in total_indices:
+            self.systems.append((Hex(self.true_width, self.true_height, self.mid_width, self.mid_height,
+                                     self.subsector_width, self.subsector_height, self.top, self.left,
+                                     self.hex_edge_length, index, self.display, random=False, valid=False)))
+
     def ask_for_csv_file(self):
         white = (255, 255, 255)
-        black = (0, 0, 0)
         self.display.fill(white)
         self.write_to_display("Enter a CSV file name", (self.display_width / 2, self.display_height * 1 / 3),
                               font_size=self.display_width // 28)
@@ -42,7 +78,6 @@ class Subsector:
             self.write_to_display(name, (self.display_width / 2, self.display_height * 4 / 7),
                                   font_size=self.display_width // 32)
             pygame.display.update()
-            b = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -55,20 +90,16 @@ class Subsector:
                         pygame.display.update()
                         pygame.draw.rect(self.display, white, (0, 480, 1800, 480))
 
-                    # elif event.key == pygame.K_DELETE:
-                    #     name = ""
-
                     elif event.key == pygame.K_ESCAPE:
-                        self.rand = True
-                        return
+                        self.rand = None
+                        return self.intro()
 
-                    elif event.key == pygame.K_KP_ENTER:
-                        pass
+                    elif event.key == pygame.K_RETURN:
+                        self.csv = name
+                        return self.setup_system_from_csv(self.csv)
 
                     else:
                         name += event.unicode
-            if b:
-                return
 
     def intro(self):
         def draw_title():
@@ -137,35 +168,35 @@ class Subsector:
         random_generator_button_rect_points = get_random_generator_button_rect_points()
         preselected_map_button_rect_points = get_preselected_map_button_rect_points()
 
-        print(randrange(1, 100))
         while True:
-            b = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse = pygame.mouse.get_pos()
-                    if random_generator_button_rect_points[0][0] <= mouse[0] <= random_generator_button_rect_points[2][0]\
-                            and random_generator_button_rect_points[1][1] <= mouse[1] <= random_generator_button_rect_points[3][1]:
+                    if random_generator_button_rect_points[0][0] <= mouse[0] <= random_generator_button_rect_points[2][
+                        0] \
+                            and random_generator_button_rect_points[1][1] <= mouse[1] <= \
+                            random_generator_button_rect_points[3][1]:
                         self.rand = True
                         return
-                    elif preselected_map_button_rect_points[2][0] <= mouse[0] <= preselected_map_button_rect_points[0][0] \
-                            and preselected_map_button_rect_points[1][1] <= mouse[1] <= preselected_map_button_rect_points[3][1]:
+                    elif preselected_map_button_rect_points[2][0] <= mouse[0] <= preselected_map_button_rect_points[0][
+                        0] \
+                            and preselected_map_button_rect_points[1][1] <= mouse[1] <= \
+                            preselected_map_button_rect_points[3][1]:
                         self.rand = False
                         return
-            if b:
-                break
 
-    def write_to_display(self, message, coordinates, font_size, font_colour=(0, 0, 0), font_background_colour=(255, 255, 255)):
+    def write_to_display(self, message, coordinates, font_size, font_colour=(0, 0, 0),
+                         font_background_colour=(255, 255, 255)):
+        print(coordinates)
         font = pygame.font.SysFont('arial', font_size)
         text = font.render(message, True, font_colour, font_background_colour)
         text_rect = text.get_rect()
         text_rect.center = coordinates[0], coordinates[1]
         self.display.blit(text, text_rect)
-
-        # ~print('backspace', randrange(1, 1000))
-        # self.clock.tick(60)
+        return text_rect
 
     def get_true_width(self):
         return 3 / 2 * self.hex_edge_length * self.subsector_width + 1 / 2 * self.hex_edge_length
@@ -189,6 +220,8 @@ class Subsector:
                 yield f"{''.join(['0' for _ in range(2 - len(str(i)))])}{i}{''.join(['0' for _ in range(2 - len(str(j)))])}{j}"
 
     def make(self):
+        self.index_generator_object = self.index_generator()
+        self.systems = []
         if self.rand:
             for _ in range(self.total_cells):
                 self.systems.append(Hex(self.true_width, self.true_height, self.mid_width, self.mid_height,
@@ -200,6 +233,50 @@ class Subsector:
     def draw_individual_hex(self, system, colour=(211, 211, 211), index_only=False, replace=None):
         x, y = self.get_position_of_hex(system.index)
         system.draw(x, y, colour, index_only)
+
+    def new_input_to_change_info(self, system, press_f_text_rect_points):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    return
+                elif event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_f]:
+                pygame.draw.rect(self.display, (255, 255, 255), press_f_text_rect_points)
+                centerx = (press_f_text_rect_points[0] * 2 + press_f_text_rect_points[2]) / 2
+                centery = (press_f_text_rect_points[1] * 2 + press_f_text_rect_points[3]) / 2
+                line1_points = self.write_to_display("What do you wish to change?", (centerx, centery), self.hex_edge_length // 2)
+                line2_points = self.write_to_display("Name, Starport Class, Gas_Giant, Erase System", (centerx, centery + press_f_text_rect_points[3]), self.hex_edge_length // 2)
+                pygame.display.update()
+                name = ""
+                while True:
+                    self.write_to_display(name, (self.display_width / 2, self.display_height * 4 / 7),
+                                          font_size=self.display_width // 32)
+                    pygame.display.update()
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            pygame.quit()
+                            quit()
+                        elif event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_BACKSPACE:
+                                if len(name) < 1:
+                                    continue
+                                name = name[:-1]
+                                pygame.display.update()
+                                pygame.draw.rect(self.display, (255, 255, 255), (press_f_text_rect_points))
+
+                            elif event.key == pygame.K_ESCAPE:
+                                return
+
+                            elif event.key == pygame.K_RETURN:
+                                self.csv = name
+                                return self.setup_system_from_csv(self.csv)
+
+                            else:
+                                name += event.unicode
+
 
     def input_to_change_info(self, system):
         while True:
@@ -222,7 +299,11 @@ class Subsector:
                         change = input("Enter name change or 'cancel' >>> ").title()
                         if len(change) >= 15:
                             print('System name must not exceed 14 characters')
-                        system.name = change if change != 'cancel' else system.name
+                        if change != 'cancel':
+                            system.name = change
+                            system.is_valid = True
+                            system.starport = "X"
+                            system.gas_giant = False
                     elif response == 'starport':
                         change = input("Enter new starport (e.g. 'A', 'C' etc.) or 'cancel' >>> ")
                         system.starport = ' ' + change + ' ' \
@@ -247,16 +328,17 @@ class Subsector:
                      ('Starport: ', str(system.starport).strip())):
             text = font.render(f'{i}{j}', True, black)
             text_rect = text.get_rect()
-            text_rect.center = (self.display_width // 5, self.display_height // 3 + y_increment)
+            text_rect.center = (self.display_width // 6, self.display_height // 3 + y_increment)
             self.display.blit(text, text_rect)
             font = pygame.font.SysFont('arial', int(self.hex_edge_length / 2))
             y_increment += 60
         text = font.render("Press 'F' to alter system info", True, black)
         text_rect = text.get_rect()
-        text_rect.center = (self.display_width // 5, self.display_height // 3 + y_increment + 50)
+        text_rect.center = (self.display_width // 6, self.display_height // 3 + y_increment + 50)
+        press_f_text_rect_points = (text_rect.left, text_rect.top, text_rect.width, text_rect.height)
         self.display.blit(text, text_rect)
         pygame.display.update()
-        self.input_to_change_info(system)
+        self.new_input_to_change_info(system, press_f_text_rect_points)
 
     def draw(self):
         def draw_outline():
@@ -309,21 +391,31 @@ class Subsector:
                                 for e in pygame.event.get():
                                     if e.type == pygame.MOUSEBUTTONDOWN:
                                         self.display_popup_info(self.map_index_to_system[self.map_button_to_index[i]])
+                                    elif e.type == pygame.K_ESCAPE:
+                                        pygame.quit()
+                                        quit()
                                 mouse = pygame.mouse.get_pos()
                                 self.clock.tick(25)
                             self.draw_individual_hex(self.map_index_to_system[j], white, True)
                             pygame.display.update()
                             break
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.rand = None
+                        self.csv = None
+                        return self.intro()
+            self.clock.tick(30)
 
 
 if __name__ == "__main__":
     pygame.init()
+    Main = Subsector(10, 8, 50)
+    Main.intro()
     while True:
-        Main = Subsector(10, 8, 50)
-        Main.intro()
         if Main.rand:
             Main.make()
             Main.draw()
         else:
             Main.ask_for_csv_file()
-    pygame.quit()
+            if Main.csv:
+                Main.draw()
